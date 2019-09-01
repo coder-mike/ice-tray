@@ -1,27 +1,41 @@
 import { computeFinancialHistory } from '../lib/financial-model';
 import { assert } from 'chai';
 import { UserActionGroup } from '../lib/user-actions';
+import * as immutable from 'immutable';
 
 describe('computeFinancialHistory', () => {
   it('No actions', () => {
     const history = computeFinancialHistory([]);
-    assert(history.length === 0);
+    assert.equal(history.size, 0);
   });
 
   it('New account', () => {
     const actions: UserActionGroup[] = [];
     actions.push({
-      timestampIssued: 10,
-      timestampEffective: 11,
-      description: '',
+      timestamp: 10,
       actions: [{
         type: 'CreateOrUpdateAccount',
         accountId: 'a',
         capacity: 12,
-        overflowTarget: undefined,
+        overflowTargetId: undefined,
       }],
     })
     const history = computeFinancialHistory(actions);
-    assert(history.length === 1);
+    assert.deepEqual(history.toJS(), [{
+      timestamp: 10,
+      accounts: {
+        'a': {
+          accountId: 'a',
+          capacity: 12,
+          fillLevel: 0,
+          fillRate: 0,
+          overflowTargetId: undefined,
+          overflowRate: 0,
+          drains: {},
+          drainInflows: {},
+          overflowInflows: {}
+        }
+      }
+    }]);
   });
 });

@@ -32,7 +32,7 @@ Some may recognize the drain as a way of representing the [Leaky Bucket](https:/
 
 Another feature that distinguishes this model from a traditional accounting system, is the fact that flow rates are considered first-class. That is, accounts are not considered to be static over time with a fixed level until explicitly changed, but instead change continuously as money drains out of them or drains into them from another account (or both).
 
-The representation of accounts states can be considered to be piecewise linear, meaning that things change continuously in a linear way until some non-linearity event is encountered. A non-linearity event can be from a user action (e.g. a user puts money into an account), or because the system reaches a transition point such as an account becoming full.
+The representation of accounts states can be considered to be piecewise linear, meaning that things change continuously in a linear way until some non-linearity event is encountered. A non-linearity event can be from a user action (e.g. a user puts money into an account), or because the system reaches a transition point such as an account reaching capacity and starting to overflow.
 
 ## Account Behavior
 

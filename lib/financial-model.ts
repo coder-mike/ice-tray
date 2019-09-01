@@ -37,12 +37,18 @@ export const AccountState = Record<AccountStateFields>({
 
 export type Accounts = i.Map<AccountId, AccountState>;
 
-export interface HistorySnapshot {
+export interface HistorySnapshotFields {
   timestamp: Timestamp;
   accounts: i.Map<AccountId, AccountState>;
 }
 
-export type FinancialHistory = HistorySnapshot[];
+export type HistorySnapshot = RecordOf<HistorySnapshotFields>;
+export const HistorySnapshot = Record<HistorySnapshotFields>({
+  timestamp: 0,
+  accounts: i.Map<AccountId, AccountState>()
+});
+
+export type FinancialHistory = i.List<HistorySnapshot>;
 
 const noAccounts: Accounts = i.Map<AccountId, AccountState>();
 
@@ -51,17 +57,17 @@ const emptyAccount: AccountState = AccountState();
 export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHistory {
   // TODO: Check for malformed account graphs, with cycles or self-references
   // TODO: Check for negative flow rates
-
-  const history: FinancialHistory = [];
-  let accounts = noAccounts;
-  const dirtyAccounts = new Array<AccountId>();
-  for (const actionGroup of actions) {
-    const timestamp = actionGroup.timestampEffective;
-    accounts = applyActions(accounts, actionGroup, dirtyAccounts);
-    accounts = updateAccounts(accounts, dirtyAccounts);
-    history.push({ timestamp, accounts });
-  }
-  return history;
+  actions = _.sortBy(actions, 'timestamp');
+  return i.List<HistorySnapshot>().withMutations(history => {
+    let accounts = noAccounts;
+    const dirtyAccounts = new Array<AccountId>();
+    for (const actionGroup of actions) {
+      const timestamp = actionGroup.timestamp;
+      accounts = applyActions(accounts, actionGroup, dirtyAccounts);
+      accounts = updateAccounts(accounts, dirtyAccounts);
+      history.push(HistorySnapshot({ timestamp, accounts }));
+    }
+  });
 }
 
 function applyActions(accounts: Accounts, actionGroup: UserActionGroup, dirtyAccounts: AccountId[]): Accounts {
@@ -70,17 +76,20 @@ function applyActions(accounts: Accounts, actionGroup: UserActionGroup, dirtyAcc
       case 'CreateOrUpdateAccount': {
         const { accountId } = action;
         let account = accounts.get(accountId, emptyAccount);
+        if (account.accountId !== action.accountId) {
+          account = account.set('accountId', action.accountId);
+        }
         if (action.capacity !== undefined) {
           account = account.set('capacity', action.capacity);
         }
-        if (('overflowTarget' in action) && action.overflowTarget !== account.overflowTargetId) {
+        if (('overflowTargetId' in action) && action.overflowTargetId !== account.overflowTargetId) {
           const previousOverflowTargetId = account.overflowTargetId;
           // Disconnect the old overflow target
           if (previousOverflowTargetId !== undefined) {
             accounts = accounts.set(previousOverflowTargetId, accounts.get(previousOverflowTargetId, emptyAccount)
               .setIn(['overflowInflows', accountId], 0));
           }
-          account = account.set('overflowTargetId', action.overflowTarget);
+          account = account.set('overflowTargetId', action.overflowTargetId);
         }
         dirtyAccounts.push(accountId);
 
