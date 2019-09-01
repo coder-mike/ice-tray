@@ -2,6 +2,7 @@ import { computeFinancialHistory, FinancialHistory, HistorySnapshot, AccountStat
 import { assert } from 'chai';
 import { UserActionGroup } from '../lib/user-actions';
 import { never } from '../lib/utils';
+import * as i from 'immutable';
 
 describe('computeFinancialHistory', () => {
   const actions: UserActionGroup[] = [];
@@ -101,45 +102,43 @@ describe('computeFinancialHistory', () => {
     assert.deepEqual(history.toJS(), expected.toJS());
   });
 
-  // it('Drains', () => {
-  //   // Drain 'a' into 'c'
-  //   actions.push({
-  //     timestamp: 30,
-  //     actions: [{
-  //       type: 'CreateOrUpdateAccount',
-  //       accountId: 'c'
-  //     }, {
-  //       type: 'UpdateDrain',
-  //       sourceAccountId: 'a',
-  //       targetAccountId: 'c',
-  //       maxRate: 3 // 3 currency units per time unit. Since capacity is 12, this should take 4 time units to drain
-  //     }],
-  //   })
+  it('Drains', () => {
+    // Drain 'a' into 'c'
+    actions.push({
+      timestamp: 30,
+      actions: [{
+        type: 'CreateOrUpdateAccount',
+        accountId: 'c'
+      }, {
+        type: 'UpdateDrain',
+        sourceAccountId: 'a',
+        targetAccountId: 'c',
+        maxRate: 3 // 3 currency units per time unit. Since capacity is 12, this should take 4 time units to drain
+      }],
+    })
 
-  //   // Start of drain
-  //   accounts = accounts
-  //     .set('a', accounts.get('a', never)
-  //       .set('drains', i.Map({
-  //         'c': DrainState({
-  //           potentialRate: 3,
-  //           effectiveRate: 3
-  //         })
-  //       })))
-  //     .set('c', AccountState({
-  //       accountId: 'c',
-  //       fillLevel: 0,
-  //       drainInflows: i.Map({ 'c': 3 })
-  //     }));
-  //   expected = expected.push(HistorySnapshot({ timestamp: 30, accounts }));
+    // Start of drain
+    accounts = accounts
+      .set('a', accounts.get('a', never)
+        .set('fillRate', -3)
+        .setIn(['drainEffectiveRates', 'c'], 3)
+        .setIn(['drainSizes', 'c'], 3))
+      .set('c', AccountState({
+        accountId: 'c',
+        fillLevel: 0,
+        fillRate: 3,
+        drainInflows: i.Map({ 'a': 3 })
+      }));
+    expected = expected.push(HistorySnapshot({ timestamp: 30, accounts }));
 
-  //   // End of drain after 4 time units
-  //   accounts = accounts
-  //     .setIn(['a', 'drains', 'c', 'effectiveRate'], 0)
-  //     .setIn(['c', 'fillLevel'], 12)
-  //     .setIn(['c', 'drainInflows', 'c'], 0)
-  //   expected = expected.push(HistorySnapshot({ timestamp: 34, accounts }));
+    // End of drain after 4 time units
+    // accounts = accounts
+    //   .setIn(['a', 'drainEffectiveRates', 'c'], 0)
+    //   .setIn(['c', 'fillLevel'], 12)
+    //   .setIn(['c', 'drainInflows', 'c'], 0)
+    // expected = expected.push(HistorySnapshot({ timestamp: 34, accounts }));
 
-  //   const history = computeFinancialHistory(actions);
-  //   assert.deepEqual(history.toJS(), expected.toJS());
-  // });
+    const history = computeFinancialHistory(actions);
+    assert.deepEqual(history.toJS(), expected.toJS());
+  });
 });

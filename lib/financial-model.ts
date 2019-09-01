@@ -1,4 +1,4 @@
-import { UserActionGroup, CreateOrUpdateAccount, UserAction, InjectMoney } from './user-actions';
+import { UserActionGroup, CreateOrUpdateAccount, UserAction, InjectMoney, UpdateDrain } from './user-actions';
 import { Timestamp, AccountId, Money, MoneyRate } from './general';
 import _ from 'lodash';
 import * as i from 'immutable';
@@ -6,26 +6,20 @@ import { Record, RecordOf } from 'immutable';
 import { unexpected, assertUnreachable } from './utils';
 
 interface AccountStateFields {
+  // Static (updated through actions)
   accountId: AccountId;
   capacity: Money;
+  overflowTargetId?: AccountId;
+  drainSizes: i.Map<AccountId, MoneyRate>;
+
+  // Transient (updated through `updateTransients`)
   fillLevel: Money;
   fillRate: MoneyRate;
-  overflowTargetId?: AccountId;
   overflowRate: MoneyRate;
-  drains: i.Map<AccountId, DrainState>;
+  drainEffectiveRates: i.Map<AccountId, MoneyRate>;
   drainInflows: i.Map<AccountId, MoneyRate>;
   overflowInflows: i.Map<AccountId, MoneyRate>;
 }
-
-export interface DrainStateFields {
-  potentialRate: MoneyRate,
-  effectiveRate: MoneyRate,
-}
-export type DrainState = RecordOf<DrainStateFields>;
-export const DrainState = Record<DrainStateFields>({
-  potentialRate: 0,
-  effectiveRate: 0
-})
 
 export type AccountState = RecordOf<AccountStateFields>;
 export const AccountState = Record<AccountStateFields>({
@@ -35,7 +29,8 @@ export const AccountState = Record<AccountStateFields>({
   fillRate: 0,
   overflowTargetId: undefined,
   overflowRate: 0,
-  drains: i.Map<AccountId, DrainState>(),
+  drainSizes: i.Map<AccountId, MoneyRate>(),
+  drainEffectiveRates: i.Map<AccountId, MoneyRate>(),
   drainInflows: i.Map<AccountId, MoneyRate>(),
   overflowInflows: i.Map<AccountId, MoneyRate>(),
 });
@@ -71,7 +66,7 @@ export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHi
     for (const actionGroup of actions) {
       const timestamp = actionGroup.timestamp;
       accounts = applyActions(accounts, actionGroup, dirtyAccounts);
-      accounts = updateAccounts(accounts, dirtyAccounts);
+      accounts = updateTransients(accounts, dirtyAccounts);
       history.push(HistorySnapshot({ timestamp, accounts }));
     }
   });
@@ -88,7 +83,7 @@ function dispatchAction(accounts: Accounts, action: UserAction, dirtyAccounts: A
   switch (action.type) {
     case 'CreateOrUpdateAccount': return createOrUpdateAccount(accounts, action, dirtyAccounts);
     case 'InjectMoney': return injectMoney(accounts, action, dirtyAccounts);
-    case 'UpdateDrain': throw new Error('not implemented');
+    case 'UpdateDrain': return updateDrain(accounts, action, dirtyAccounts);
     // TODO: Don't forget that when we remove a drain, we need to remove flow to the drain target
     case 'DeleteDrain': throw new Error('not implemented');
     case 'DeleteAccount': throw new Error('not implemented');
@@ -107,6 +102,18 @@ function injectMoney(accounts: Accounts, action: InjectMoney, dirtyAccounts: Arr
   return accounts.set(accountId, account);
 }
 
+function updateDrain(accounts: Accounts, action: UpdateDrain, dirtyAccounts: Array<AccountId>): Accounts {
+  let sourceAccount = accounts.get(action.sourceAccountId, emptyAccount);
+  if (sourceAccount.accountId !== action.sourceAccountId) {
+    sourceAccount = sourceAccount.set('accountId', action.sourceAccountId);
+  }
+
+  sourceAccount = sourceAccount.setIn(['drainSizes', action.targetAccountId], action.maxRate);
+
+  dirtyAccounts.push(action.sourceAccountId);
+  return accounts.set(action.sourceAccountId, sourceAccount);
+}
+
 function createOrUpdateAccount(accounts: Accounts, action: CreateOrUpdateAccount, dirtyAccounts: Array<AccountId>): Accounts {
   const { accountId } = action;
   let account = accounts.get(accountId, emptyAccount);
@@ -116,6 +123,7 @@ function createOrUpdateAccount(accounts: Accounts, action: CreateOrUpdateAccount
   if (action.capacity !== undefined) {
     account = account.set('capacity', action.capacity);
   }
+  // TODO: I think this can be done as part of changing the overflow rate, if we assume that absent overflows are equivalent to zero rate
   if (('overflowTargetId' in action) && action.overflowTargetId !== account.overflowTargetId) {
     const previousOverflowTargetId = account.overflowTargetId;
     // Disconnect the old overflow target
@@ -130,7 +138,7 @@ function createOrUpdateAccount(accounts: Accounts, action: CreateOrUpdateAccount
   return accounts.set(accountId, account);
 }
 
-function updateAccounts(accounts: Accounts, dirtyAccounts: AccountId[]): Accounts {
+function updateTransients(accounts: Accounts, dirtyAccounts: AccountId[]): Accounts {
   while (dirtyAccounts.length) {
     const accountId = dirtyAccounts.shift() || unexpected();
     let account = accounts.get(accountId, emptyAccount);
@@ -154,28 +162,33 @@ function updateAccounts(accounts: Accounts, dirtyAccounts: AccountId[]): Account
     let effectiveDrainRate: number;
 
     // Drains and fill rate
-    const totalPotentialDrainRate = account.drains.reduce((a, x) => a + x.potentialRate, 0);
+    const totalPotentialDrainRate = account.drainSizes.reduce((a, x) => a + x, 0);
     // Run the drains at full capacity?
     if (account.fillLevel > 0 || effectiveInflowRate >= totalPotentialDrainRate) {
       effectiveDrainRate = totalPotentialDrainRate;
-      for (const [targetAccountId, { effectiveRate, potentialRate }] of account.drains) {
+      const drainSizes = account.drainSizes;
+      const drainEffectiveRates = account.drainEffectiveRates;
+      for (const [targetAccountId, potentialRate] of drainSizes) {
+        const effectiveRate = drainEffectiveRates.get(targetAccountId, 0);
         if (effectiveRate !== potentialRate) {
-          account = account.setIn(['drains', targetAccountId, 'effectiveRate'], potentialRate);
+          account = account.setIn(['drainEffectiveRates', targetAccountId], potentialRate);
           accountChanged = true;
-          accounts = accounts.setIn([targetAccountId, 'drainInflows', accountId], effectiveRate);
+          accounts = accounts.setIn([targetAccountId, 'drainInflows', accountId], potentialRate);
           dirtyAccounts.push(targetAccountId);
         }
       }
-
     } else { // The drains are limited by inflow rate
       effectiveDrainRate = effectiveInflowRate;
-      for (const [targetAccountId, { effectiveRate, potentialRate }] of account.drains) {
+      const drainSizes = account.drainSizes;
+      const drainEffectiveRates = account.drainEffectiveRates;
+      for (const [targetAccountId, potentialRate] of drainSizes) {
+        const effectiveRate = drainEffectiveRates.get(targetAccountId, 0);
         // Inflow is divided proportionately between the drains
         const intendedRate = effectiveInflowRate * potentialRate / totalPotentialDrainRate;
         if (effectiveRate !== intendedRate) {
-          account = account.setIn(['drains', targetAccountId, 'effectiveRate'], intendedRate);
+          account = account.setIn(['drainEffectiveRates', targetAccountId], intendedRate);
           accountChanged = true;
-          accounts = accounts.setIn([targetAccountId, 'drainInflows', accountId], effectiveRate);
+          accounts = accounts.setIn([targetAccountId, 'drainInflows', accountId], intendedRate);
           dirtyAccounts.push(targetAccountId);
         }
       }
