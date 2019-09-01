@@ -1,9 +1,9 @@
-import { UserActionGroup } from './user-actions';
+import { UserActionGroup, CreateOrUpdateAccount, UserAction, InjectMoney } from './user-actions';
 import { Timestamp, AccountId, Money, MoneyRate } from './general';
 import _ from 'lodash';
 import * as i from 'immutable';
 import { Record, RecordOf } from 'immutable';
-import { assertUnreachable, unexpected } from './utils';
+import { unexpected, assertUnreachable } from './utils';
 
 interface AccountStateFields {
   accountId: AccountId;
@@ -17,10 +17,15 @@ interface AccountStateFields {
   overflowInflows: i.Map<AccountId, MoneyRate>;
 }
 
-export type DrainState = RecordOf<{
+export interface DrainStateFields {
   potentialRate: MoneyRate,
   effectiveRate: MoneyRate,
-}>;
+}
+export type DrainState = RecordOf<DrainStateFields>;
+export const DrainState = Record<DrainStateFields>({
+  potentialRate: 0,
+  effectiveRate: 0
+})
 
 export type AccountState = RecordOf<AccountStateFields>;
 export const AccountState = Record<AccountStateFields>({
@@ -74,47 +79,55 @@ export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHi
 
 function applyActions(accounts: Accounts, actionGroup: UserActionGroup, dirtyAccounts: AccountId[]): Accounts {
   for (const action of actionGroup.actions) {
-    switch (action.type) {
-      case 'CreateOrUpdateAccount': {
-        const { accountId } = action;
-        let account = accounts.get(accountId, emptyAccount);
-        if (account.accountId !== action.accountId) {
-          account = account.set('accountId', action.accountId);
-        }
-        if (action.capacity !== undefined) {
-          account = account.set('capacity', action.capacity);
-        }
-        if (('overflowTargetId' in action) && action.overflowTargetId !== account.overflowTargetId) {
-          const previousOverflowTargetId = account.overflowTargetId;
-          // Disconnect the old overflow target
-          if (previousOverflowTargetId !== undefined) {
-            accounts = accounts.set(previousOverflowTargetId, accounts.get(previousOverflowTargetId, emptyAccount)
-              .setIn(['overflowInflows', accountId], 0));
-          }
-          account = account.set('overflowTargetId', action.overflowTargetId);
-        }
-        dirtyAccounts.push(accountId);
-
-        accounts = accounts.set(accountId, account);
-        break;
-      }
-      case 'InjectMoney': {
-        const { accountId } = action;
-        let account = accounts.get(accountId, emptyAccount);
-        if (account.accountId !== action.accountId) {
-          account = account.set('accountId', action.accountId);
-        }
-        account = account.set('fillLevel', account.fillLevel + action.amount);
-        dirtyAccounts.push(accountId);
-        accounts = accounts.set(accountId, account);
-        break;
-      }
-      // TODO: Don't forget that when we remove a drain, we need to remove flow to the drain target
-      // TODO
-      default: throw new Error('not implemented'); // return assertUnreachable(action);
-    }
+    accounts = dispatchAction(accounts, action, dirtyAccounts);
   }
   return accounts;
+}
+
+function dispatchAction(accounts: Accounts, action: UserAction, dirtyAccounts: AccountId[]): Accounts {
+  switch (action.type) {
+    case 'CreateOrUpdateAccount': return createOrUpdateAccount(accounts, action, dirtyAccounts);
+    case 'InjectMoney': return injectMoney(accounts, action, dirtyAccounts);
+    case 'UpdateDrain': throw new Error('not implemented');
+    // TODO: Don't forget that when we remove a drain, we need to remove flow to the drain target
+    case 'DeleteDrain': throw new Error('not implemented');
+    case 'DeleteAccount': throw new Error('not implemented');
+    default: return assertUnreachable(action);
+  }
+}
+
+function injectMoney(accounts: Accounts, action: InjectMoney, dirtyAccounts: Array<AccountId>): Accounts {
+  const { accountId } = action;
+  let account = accounts.get(accountId, emptyAccount);
+  if (account.accountId !== action.accountId) {
+    account = account.set('accountId', action.accountId);
+  }
+  account = account.set('fillLevel', account.fillLevel + action.amount);
+  dirtyAccounts.push(accountId);
+  return accounts.set(accountId, account);
+}
+
+function createOrUpdateAccount(accounts: Accounts, action: CreateOrUpdateAccount, dirtyAccounts: Array<AccountId>): Accounts {
+  const { accountId } = action;
+  let account = accounts.get(accountId, emptyAccount);
+  if (account.accountId !== action.accountId) {
+    account = account.set('accountId', action.accountId);
+  }
+  if (action.capacity !== undefined) {
+    account = account.set('capacity', action.capacity);
+  }
+  if (('overflowTargetId' in action) && action.overflowTargetId !== account.overflowTargetId) {
+    const previousOverflowTargetId = account.overflowTargetId;
+    // Disconnect the old overflow target
+    if (previousOverflowTargetId !== undefined) {
+      accounts = accounts.set(previousOverflowTargetId, accounts.get(previousOverflowTargetId, emptyAccount)
+        .setIn(['overflowInflows', accountId], 0));
+    }
+    account = account.set('overflowTargetId', action.overflowTargetId);
+  }
+  dirtyAccounts.push(accountId);
+
+  return accounts.set(accountId, account);
 }
 
 function updateAccounts(accounts: Accounts, dirtyAccounts: AccountId[]): Accounts {
