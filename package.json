@@ -1,0 +1,39 @@
+{
+  "name": "ice-tray",
+  "version": "1.0.0",
+  "description": "Financial model based on the concept of water flowing into wells of a slanted ice cube tray",
+  "main": "dist/index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "mocha",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coder-mike/ice-tray.git"
+  },
+  "author": "Michael Hunter",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/coder-mike/ice-tray/issues"
+  },
+  "homepage": "https://github.com/coder-mike/ice-tray#readme",
+  "dependencies": {
+    "@types/lodash": "^4.14.138",
+    "immutable": "^4.0.0-rc.12",
+    "lodash": "^4.17.15"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.0",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha-clearscreen-reporter": "^1.0.1",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.6.2"
+  },
+  "peerDependencies": {
+    "immutable": "^4.0.0-rc.12"
+  }
+}

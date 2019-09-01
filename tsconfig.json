@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "lib": ["es2019"],
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    "outDir": "dist",
+    "declaration": true,
+    "sourceMap": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "lib",
+    "index.ts"
+  ]
+}
