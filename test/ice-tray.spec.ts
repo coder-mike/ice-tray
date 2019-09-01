@@ -63,4 +63,26 @@ describe('computeFinancialHistory', () => {
     expected = expected.push(HistorySnapshot({ timestamp: 20, accounts }));
     assert.deepEqual(history.toJS(), expected.toJS());
   });
+
+  it('Add overflow', () => {
+    actions.push({
+      timestamp: 20,
+      actions: [{
+        type: 'CreateOrUpdateAccount',
+        accountId: 'a',
+        overflowTargetId: 'b'
+      }, {
+        type: 'CreateOrUpdateAccount',
+        accountId: 'b'
+      }],
+    })
+    const history = computeFinancialHistory(actions);
+    accounts = accounts
+      .set('a', accounts.get('a', never)
+        .set('fillLevel', 12)
+        .set('overflowTargetId', 'b'))
+      .set('b', AccountState({ accountId: 'b', fillLevel: 3 }));
+    expected = expected.push(HistorySnapshot({ timestamp: 20, accounts }));
+    assert.deepEqual(history.toJS(), expected.toJS());
+  });
 });
