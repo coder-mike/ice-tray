@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="76.410416mm"
+   height="52.245693mm"
+   viewBox="0 0 76.410416 52.245693"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
+   sodipodi:docname="well-cascade.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="182.61305"
+     inkscape:cy="43.00323"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     fit-margin-top="5"
+     fit-margin-left="5"
+     fit-margin-right="5"
+     fit-margin-bottom="5">
+    <inkscape:grid
+       type="xygrid"
+       id="grid4518"
+       originx="-26.617709"
+       originy="-118.69267" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-26.617708,-126.06164)">
+    <rect
+       style="opacity:1;vector-effect:none;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4559"
+       width="79.375008"
+       height="54.239571"
+       x="25.135416"
+       y="125.02084" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.52777767px;line-height:1.25;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="86.50341"
+       y="144.20985"
+       id="text4557"><tspan
+         sodipodi:role="line"
+         id="tspan4555"
+         x="86.50341"
+         y="144.20985"
+         style="text-align:center;text-anchor:middle;stroke-width:0.26458332">Account C</tspan></text>
+    <path
+       style="fill:#00d0e5;fill-opacity:1;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 55.827083,154.125 c 1.322917,1.32292 3.96875,1.32292 5.291666,0 1.322918,1.32292 3.704168,1.32292 5.027083,0 1.322918,1.32292 3.96875,1.32292 5.291667,0 1.322918,1.32292 2.645834,1.32292 3.96875,0 l 10e-7,11.90625 H 54.239583 Z"
+       id="path4522"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccc" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 55.562499,140.89583 v 15.875 c 0,10.58334 18.520833,10.58334 18.520833,0 V 146.1875 h 2.645834 v 21.16667 h -23.8125 v -26.45834 z"
+       id="path4520"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="csscccccc" />
+    <path
+       style="fill:#00d0e5;fill-opacity:1;stroke:none;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 125,526.51953 v 81 h 80 l 0.88477,-15.0293 C 208.20682,592.4499 220,592.04764 220,587.51953 c 0,-5.00001 2.6269,-59.19162 -10.25254,-59.19162 -5,0 -14.74745,3.19163 -19.74746,-1.80838 -5,5.00001 -14.99999,5.00001 -20,0 -4.99999,5.00001 -19.99999,5.00001 -25,0 -5,5.00001 -15,5.00001 -20,0 z"
+       transform="scale(0.26458333)"
+       id="path4524"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccsscccc" />
+    <path
+       sodipodi:nodetypes="csscccccc"
+       inkscape:connector-curvature="0"
+       id="path4526"
+       d="m 34.395833,135.60416 v 15.875 c 0,10.58334 18.520833,10.58334 18.520833,0 V 140.89583 H 55.5625 V 162.0625 H 31.75 v -26.45834 z"
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <path
+       sodipodi:nodetypes="csscccccc"
+       inkscape:connector-curvature="0"
+       id="path4545"
+       d="m 76.729167,146.7167 v 15.875 c 0,10.58334 18.520833,10.58334 18.520833,0 v -10.58333 h 2.645834 v 21.16667 h -23.8125 V 146.7167 Z"
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.52777767px;line-height:1.25;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="44.190746"
+       y="133.62651"
+       id="text4549"><tspan
+         sodipodi:role="line"
+         id="tspan4547"
+         x="44.190746"
+         y="133.62651"
+         style="text-align:center;text-anchor:middle;stroke-width:0.26458332">Account A</tspan></text>
+    <text
+       id="text4553"
+       y="138.91818"
+       x="65.313492"
+       style="font-style:normal;font-weight:normal;font-size:3.52777767px;line-height:1.25;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       xml:space="preserve"><tspan
+         style="text-align:center;text-anchor:middle;stroke-width:0.26458332"
+         y="138.91818"
+         x="65.313492"
+         id="tspan4551"
+         sodipodi:role="line">Account B</tspan></text>
+  </g>
+</svg>
