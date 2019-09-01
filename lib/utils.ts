@@ -5,3 +5,5 @@ export function assertUnreachable(value: never): never {
 export function unexpected(): never {
   throw new Error('Did not expect to get here');
 }
+
+export const never = undefined as never;

@@ -49,10 +49,11 @@ export const HistorySnapshot = Record<HistorySnapshotFields>({
 });
 
 export type FinancialHistory = i.List<HistorySnapshot>;
+export const FinancialHistory = () => i.List<HistorySnapshot>();
 
-const noAccounts: Accounts = i.Map<AccountId, AccountState>();
+export const noAccounts: Accounts = i.Map<AccountId, AccountState>();
 
-const emptyAccount: AccountState = AccountState();
+export const emptyAccount: AccountState = AccountState();
 
 export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHistory {
   // TODO: Check for malformed account graphs, with cycles or self-references

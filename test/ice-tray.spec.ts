@@ -1,10 +1,13 @@
-import { computeFinancialHistory } from '../lib/financial-model';
+import { computeFinancialHistory, FinancialHistory, HistorySnapshot, Accounts, AccountState, noAccounts } from '../lib/financial-model';
 import { assert } from 'chai';
 import { UserActionGroup } from '../lib/user-actions';
-import * as immutable from 'immutable';
+import { never } from '../lib/utils';
 
 describe('computeFinancialHistory', () => {
   const actions: UserActionGroup[] = [];
+  let accounts = noAccounts;
+  let expected = FinancialHistory();
+
   it('No actions', () => {
     const history = computeFinancialHistory(actions);
     assert.equal(history.size, 0);
@@ -21,22 +24,14 @@ describe('computeFinancialHistory', () => {
       }],
     })
     const history = computeFinancialHistory(actions);
-    assert.deepEqual(history.toJS(), [{
-      timestamp: 10,
-      accounts: {
-        'a': {
-          accountId: 'a',
-          capacity: 12,
-          fillLevel: 0,
-          fillRate: 0,
-          overflowTargetId: undefined,
-          overflowRate: 0,
-          drains: {},
-          drainInflows: {},
-          overflowInflows: {}
-        }
-      }
-    }]);
+    accounts = accounts.set('a', AccountState({
+      accountId: 'a',
+      capacity: 12,
+      fillLevel: 0,
+      fillRate: 0
+    }));
+    expected = expected.push(HistorySnapshot({ timestamp: 10, accounts }));
+    assert.deepEqual(history.toJS(), expected.toJS());
   });
 
   it('Inject money', () => {
@@ -49,36 +44,8 @@ describe('computeFinancialHistory', () => {
       }],
     })
     const history = computeFinancialHistory(actions);
-    assert.deepEqual(history.toJS(), [{
-      timestamp: 10,
-      accounts: {
-        'a': {
-          accountId: 'a',
-          capacity: 12,
-          fillLevel: 0,
-          fillRate: 0,
-          overflowTargetId: undefined,
-          overflowRate: 0,
-          drains: {},
-          drainInflows: {},
-          overflowInflows: {}
-        }
-      }
-    }, {
-      timestamp: 15,
-      accounts: {
-        'a': {
-          accountId: 'a',
-          capacity: 12,
-          fillLevel: 6,
-          fillRate: 0,
-          overflowTargetId: undefined,
-          overflowRate: 0,
-          drains: {},
-          drainInflows: {},
-          overflowInflows: {}
-        }
-      }
-    }]);
+    accounts = accounts.set('a', accounts.get('a', never).set('fillLevel', 6));
+    expected = expected.push(HistorySnapshot({ timestamp: 15, accounts }));
+    assert.deepEqual(history.toJS(), expected.toJS());
   });
 });
