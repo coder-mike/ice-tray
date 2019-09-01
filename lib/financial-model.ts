@@ -57,6 +57,7 @@ const emptyAccount: AccountState = AccountState();
 export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHistory {
   // TODO: Check for malformed account graphs, with cycles or self-references
   // TODO: Check for negative flow rates
+  // TODO: Validate for invalid transactions, such as taking too much out of account
   actions = _.sortBy(actions, 'timestamp');
   return i.List<HistorySnapshot>().withMutations(history => {
     let accounts = noAccounts;
@@ -93,6 +94,17 @@ function applyActions(accounts: Accounts, actionGroup: UserActionGroup, dirtyAcc
         }
         dirtyAccounts.push(accountId);
 
+        accounts = accounts.set(accountId, account);
+        break;
+      }
+      case 'InjectMoney': {
+        const { accountId } = action;
+        let account = accounts.get(accountId, emptyAccount);
+        if (account.accountId !== action.accountId) {
+          account = account.set('accountId', action.accountId);
+        }
+        account = account.set('fillLevel', account.fillLevel + action.amount);
+        dirtyAccounts.push(accountId);
         accounts = accounts.set(accountId, account);
         break;
       }
