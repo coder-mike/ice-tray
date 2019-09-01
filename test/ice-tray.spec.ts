@@ -48,4 +48,19 @@ describe('computeFinancialHistory', () => {
     expected = expected.push(HistorySnapshot({ timestamp: 15, accounts }));
     assert.deepEqual(history.toJS(), expected.toJS());
   });
+
+  it('Inject money past capacity, no overflow', () => {
+    actions.push({
+      timestamp: 20,
+      actions: [{
+        type: 'InjectMoney',
+        accountId: 'a',
+        amount: 9 // A further 9 will bring this account past capacity
+      }],
+    })
+    const history = computeFinancialHistory(actions);
+    accounts = accounts.set('a', accounts.get('a', never).set('fillLevel', 15));
+    expected = expected.push(HistorySnapshot({ timestamp: 20, accounts }));
+    assert.deepEqual(history.toJS(), expected.toJS());
+  });
 });
