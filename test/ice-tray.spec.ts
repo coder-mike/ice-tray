@@ -170,5 +170,28 @@ describe('computeFinancialHistory', () => {
 
     const history = computeFinancialHistory(actions);
     assert.deepEqual(history.toJS(), expected.toJS());
-  })
+  });
+
+
+  it('Delete account', () => {
+    // Cut off the draining before it completes
+    actions.push({
+      timestamp: 38,
+      actions: [{
+        type: 'DeleteAccount',
+        accountId: 'a'
+      }],
+    });
+
+    accounts = accounts
+      .delete('a')
+      .deleteIn(['b', 'overflowInflows', 'a'])
+      .deleteIn(['c', 'drainInflows', 'a'])
+
+    // Replace the last state, since it no longer represents the emptying
+    expected = expected.push(HistorySnapshot({ timestamp: 38, accounts }));
+
+    const history = computeFinancialHistory(actions);
+    assert.deepEqual(history.toJS(), expected.toJS());
+  });
 });

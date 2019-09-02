@@ -1,4 +1,4 @@
-import { UserActionGroup, CreateOrUpdateAccount, UserAction, InjectMoney, UpdateDrain, DeleteDrain } from './user-actions';
+import { UserActionGroup, CreateOrUpdateAccount, UserAction, InjectMoney, UpdateDrain, DeleteDrain, DeleteAccount } from './user-actions';
 import { Timestamp, AccountId, Money, MoneyRate } from './general';
 import _ from 'lodash';
 import * as i from 'immutable';
@@ -199,9 +199,22 @@ function dispatchAction(accounts: Accounts, action: UserAction, dirtyAccounts: A
     case 'InjectMoney': return injectMoney(accounts, action, dirtyAccounts);
     case 'UpdateDrain': return updateDrain(accounts, action, dirtyAccounts);
     case 'DeleteDrain': return deleteDrain(accounts, action, dirtyAccounts);
-    case 'DeleteAccount': throw new Error('not implemented');
+    case 'DeleteAccount': return deleteAccount(accounts, action, dirtyAccounts);
     default: return assertUnreachable(action);
   }
+}
+
+function deleteAccount(accounts: Accounts, action: DeleteAccount, dirtyAccounts: Array<AccountId>): Accounts {
+  return accounts.withMutations(accounts => {
+    const account = accounts.get(action.accountId, emptyAccount);
+    for (const drainAccountId of account.drainEffectiveRates.keys()) {
+      accounts.deleteIn([drainAccountId, 'drainInflows', action.accountId]);
+    }
+    if (account.overflowTargetId !== undefined) {
+      accounts.deleteIn([account.overflowTargetId, 'overflowInflows', action.accountId]);
+    }
+    accounts.delete(action.accountId);
+  });
 }
 
 function deleteDrain(accounts: Accounts, action: DeleteDrain, dirtyAccounts: Array<AccountId>): Accounts {
