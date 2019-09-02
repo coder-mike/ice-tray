@@ -144,4 +144,31 @@ describe('computeFinancialHistory', () => {
     const history = computeFinancialHistory(actions);
     assert.deepEqual(history.toJS(), expected.toJS());
   });
+
+  it('Drain cuts off', () => {
+    // Cut off the draining before it completes
+    actions.push({
+      timestamp: 33,
+      actions: [{
+        type: 'DeleteDrain',
+        sourceAccountId: 'a',
+        targetAccountId: 'c',
+      }],
+    });
+
+    accounts = accounts
+      .setIn(['a', 'drainSizes', 'c'], 0)
+      .setIn(['a', 'drainEffectiveRates', 'c'], 0)
+      .setIn(['a', 'fillLevel'], 3)
+      .setIn(['a', 'fillRate'], 0)
+      .setIn(['c', 'fillLevel'], 9)
+      .setIn(['c', 'fillRate'], 0)
+      .setIn(['c', 'drainInflows', 'a'], 0)
+
+    // Replace the last state, since it no longer represents the emptying
+    expected = expected.set(expected.size - 1, HistorySnapshot({ timestamp: 33, accounts }));
+
+    const history = computeFinancialHistory(actions);
+    assert.deepEqual(history.toJS(), expected.toJS());
+  })
 });

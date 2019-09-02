@@ -1,4 +1,4 @@
-import { UserActionGroup, CreateOrUpdateAccount, UserAction, InjectMoney, UpdateDrain } from './user-actions';
+import { UserActionGroup, CreateOrUpdateAccount, UserAction, InjectMoney, UpdateDrain, DeleteDrain } from './user-actions';
 import { Timestamp, AccountId, Money, MoneyRate } from './general';
 import _ from 'lodash';
 import * as i from 'immutable';
@@ -198,11 +198,15 @@ function dispatchAction(accounts: Accounts, action: UserAction, dirtyAccounts: A
     case 'CreateOrUpdateAccount': return createOrUpdateAccount(accounts, action, dirtyAccounts);
     case 'InjectMoney': return injectMoney(accounts, action, dirtyAccounts);
     case 'UpdateDrain': return updateDrain(accounts, action, dirtyAccounts);
-    // TODO: Don't forget that when we remove a drain, we need to remove flow to the drain target
-    case 'DeleteDrain': throw new Error('not implemented');
+    case 'DeleteDrain': return deleteDrain(accounts, action, dirtyAccounts);
     case 'DeleteAccount': throw new Error('not implemented');
     default: return assertUnreachable(action);
   }
+}
+
+function deleteDrain(accounts: Accounts, action: DeleteDrain, dirtyAccounts: Array<AccountId>): Accounts {
+  dirtyAccounts.push(action.sourceAccountId);
+  return accounts.setIn([action.sourceAccountId, 'drainSizes', action.targetAccountId], 0);
 }
 
 function injectMoney(accounts: Accounts, action: InjectMoney, dirtyAccounts: Array<AccountId>): Accounts {
