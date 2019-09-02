@@ -3,7 +3,7 @@ import { Timestamp, AccountId, Money, MoneyRate } from './general';
 import _ from 'lodash';
 import * as i from 'immutable';
 import { Record, RecordOf } from 'immutable';
-import { unexpected, assertUnreachable } from './utils';
+import { unexpected, assertUnreachable, never } from './utils';
 
 interface AccountStateFields {
   // Static (updated through actions)
@@ -48,6 +48,27 @@ export const HistorySnapshot = Record<HistorySnapshotFields>({
   accounts: i.Map<AccountId, AccountState>()
 });
 
+interface AccountNonlinearity {
+  // Note: the modifier is used to avoid issues of numeric inaccuracy. That is,
+  // we could calculate the next nonlinearity event, but due to calculation
+  // error, we might calculate a state that is still within the linear region.
+  // The modifier is a way to force the relevant part of the state to the exact
+  // trigger of the nonlinearity. For example, if the nonlinearity is from an
+  // account getting full, then modifier will _make_ the account full. The
+  // modifier is applied after the linear projection, and is intended to clean
+  // up any numeric errors in projection. The modifier is a function rather than
+  // a state just for performance reasons, since the code that calculates the
+  // modifier does it on all accounts with nonlinearities, even though most of
+  // these are not used in each step.
+  modifier: (account: AccountState) => AccountState;
+  accountId: AccountId;
+}
+
+interface NonLinearities {
+  timestamp: number; // Infinity if no more nonlinearities
+  accounts: AccountNonlinearity[];
+}
+
 export type FinancialHistory = i.List<HistorySnapshot>;
 export const FinancialHistory = () => i.List<HistorySnapshot>();
 
@@ -61,15 +82,108 @@ export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHi
   // TODO: Validate for invalid transactions, such as taking too much out of account
   actions = _.sortBy(actions, 'timestamp');
   return i.List<HistorySnapshot>().withMutations(history => {
-    let accounts = noAccounts;
+    let state: HistorySnapshot = HistorySnapshot({ timestamp: -Infinity, accounts: noAccounts });
     const dirtyAccounts = new Array<AccountId>();
     for (const actionGroup of actions) {
+      // "Natural" non-linearity events that occur between user actions, such as accounts reaching capacity
+      // TODO: Test cases for this
+      for (const intermediate of computeIntermediateStates(state, actionGroup.timestamp)) {
+        state = intermediate;
+        history.push(state);
+      }
       const timestamp = actionGroup.timestamp;
-      accounts = applyActions(accounts, actionGroup, dirtyAccounts);
-      accounts = updateTransients(accounts, dirtyAccounts);
-      history.push(HistorySnapshot({ timestamp, accounts }));
+      state = projectLinear(state, timestamp);
+      state = state.set('accounts', applyActions(state.accounts, actionGroup, dirtyAccounts));
+      state = state.set('accounts', updateTransients(state.accounts, dirtyAccounts));
+      history.push(HistorySnapshot(state));
+    }
+
+    for (const intermediate of computeIntermediateStates(state, Infinity)) {
+      history.push(intermediate);
     }
   });
+}
+
+function* computeIntermediateStates(state: HistorySnapshot, targetTimestamp: number): IterableIterator<HistorySnapshot> {
+  const dirtyAccounts = new Array<AccountId>();
+  let nextNonlinearities = calculateNextNonlinearities(state);
+  while (nextNonlinearities.timestamp < targetTimestamp) {
+    state = projectLinear(state, nextNonlinearities.timestamp);
+    for (const { accountId, modifier } of nextNonlinearities.accounts) {
+      const accounts = state.accounts;
+      state = state.set('accounts', accounts
+        .set(accountId, modifier(accounts.get(accountId, never))));
+      dirtyAccounts.push(accountId);
+    }
+    state = state.set('accounts', updateTransients(state.accounts, dirtyAccounts));
+    yield state;
+    nextNonlinearities = calculateNextNonlinearities(state);
+  }
+}
+
+function projectLinear(state: HistorySnapshot, timestamp: number): HistorySnapshot {
+  /*
+  This function is optimized for just a few accounts being in a transient state.
+  Likely, most accounts in a budget are either full or empty and not changing.
+
+  Note: a linear projection will never make any accounts "dirty" in the sense
+  that they need to be evaluated for transient changes (by updateTransients),
+  because it is assumed to be used only to move along a linear segment of the
+  account state.
+  */
+
+  const deltaTime = timestamp - state.timestamp;
+  return HistorySnapshot({
+    timestamp,
+    accounts: state.accounts.withMutations(accounts => {
+      // Making a copy because I'm not entirely sure if the immutable-js library
+      // has taken into account the possibility of iterating over a collection
+      // while mutating it, like the builtin collections do.
+      const toIterate = [...accounts.keys()];
+      for (const accountId of toIterate) {
+        const account = accounts.get(accountId, never);
+        if (account.fillRate !== 0) {
+          accounts.set(accountId, account.set('fillLevel', account.fillLevel + account.fillRate * deltaTime))
+        }
+      }
+    })
+  });
+}
+
+function calculateNextNonlinearities(state: HistorySnapshot): NonLinearities {
+  let earliestNonlinearities: NonLinearities = { timestamp: Infinity, accounts: [] };
+  for (const [accountId, account] of state.accounts) {
+    // Fill up
+    // Note: an account can be at or above capacity with a positive fill level, if there is nowhere for it to overflow to
+    if (account.fillRate > 0 && account.fillLevel < account.capacity) {
+      const timestamp = state.timestamp + (account.capacity - account.fillLevel) / account.fillRate;
+      nonlinearity(timestamp, {
+        accountId,
+        modifier: account => account.set('fillLevel', account.capacity)
+      })
+    }
+
+    // Empty
+    if (account.fillRate < 0 && account.fillLevel > 0) {
+      const timestamp = state.timestamp + account.fillLevel / (-account.fillRate);
+      nonlinearity(timestamp, {
+        accountId,
+        modifier: account => account.set('fillLevel', 0)
+      });
+    }
+  }
+
+  return earliestNonlinearities;
+
+  function nonlinearity(timestamp: number, nonlinearity: AccountNonlinearity) {
+    if (timestamp <= earliestNonlinearities.timestamp) {
+      if (timestamp === earliestNonlinearities.timestamp) {
+        earliestNonlinearities.accounts.push(nonlinearity);
+      } else {
+        earliestNonlinearities = { timestamp, accounts: [nonlinearity] };
+      }
+    }
+  }
 }
 
 function applyActions(accounts: Accounts, actionGroup: UserActionGroup, dirtyAccounts: AccountId[]): Accounts {
@@ -209,7 +323,7 @@ function updateTransients(accounts: Accounts, dirtyAccounts: AccountId[]): Accou
       fillRate = potentialFillRate;
       overflowRate = 0;
     } else {
-      // Overflowing
+      // Overflowing or stationary
       fillRate = 0;
       overflowRate = potentialFillRate;
     }

@@ -132,11 +132,14 @@ describe('computeFinancialHistory', () => {
     expected = expected.push(HistorySnapshot({ timestamp: 30, accounts }));
 
     // End of drain after 4 time units
-    // accounts = accounts
-    //   .setIn(['a', 'drainEffectiveRates', 'c'], 0)
-    //   .setIn(['c', 'fillLevel'], 12)
-    //   .setIn(['c', 'drainInflows', 'c'], 0)
-    // expected = expected.push(HistorySnapshot({ timestamp: 34, accounts }));
+    accounts = accounts
+      .setIn(['a', 'drainEffectiveRates', 'c'], 0)
+      .setIn(['a', 'fillLevel'], 0)
+      .setIn(['a', 'fillRate'], 0)
+      .setIn(['c', 'fillLevel'], 12)
+      .setIn(['c', 'fillRate'], 0)
+      .setIn(['c', 'drainInflows', 'a'], 0)
+    expected = expected.push(HistorySnapshot({ timestamp: 34, accounts }));
 
     const history = computeFinancialHistory(actions);
     assert.deepEqual(history.toJS(), expected.toJS());
