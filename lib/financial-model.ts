@@ -83,7 +83,7 @@ export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHi
   actions = _.sortBy(actions, 'timestamp');
   return i.List<HistorySnapshot>().withMutations(history => {
     let state: HistorySnapshot = HistorySnapshot({ timestamp: -Infinity, accounts: noAccounts });
-    const dirtyAccounts = new Array<AccountId>();
+    const dirtyAccounts: AccountId[] = [];
     for (const actionGroup of actions) {
       // "Natural" non-linearity events that occur between user actions, such as accounts reaching capacity
       // TODO: Test cases for this
@@ -104,8 +104,11 @@ export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHi
   });
 }
 
-function* computeIntermediateStates(state: HistorySnapshot, targetTimestamp: number): IterableIterator<HistorySnapshot> {
-  const dirtyAccounts = new Array<AccountId>();
+function* computeIntermediateStates(
+  state: HistorySnapshot,
+  targetTimestamp: number
+): IterableIterator<HistorySnapshot> {
+  const dirtyAccounts: AccountId[] = [];
   let nextNonlinearities = calculateNextNonlinearities(state);
   while (nextNonlinearities.timestamp < targetTimestamp) {
     state = projectLinear(state, nextNonlinearities.timestamp);
@@ -154,7 +157,9 @@ function calculateNextNonlinearities(state: HistorySnapshot): NonLinearities {
   let earliestNonlinearities: NonLinearities = { timestamp: Infinity, accounts: [] };
   for (const [accountId, account] of state.accounts) {
     // Fill up
-    // Note: an account can be at or above capacity with a positive fill level, if there is nowhere for it to overflow to
+
+    // Note: an account can be at or above capacity with a positive fill level,
+    // if there is nowhere for it to overflow to
     if (account.fillRate > 0 && account.fillLevel < account.capacity) {
       const timestamp = state.timestamp + (account.capacity - account.fillLevel) / account.fillRate;
       nonlinearity(timestamp, {
@@ -204,7 +209,7 @@ function dispatchAction(accounts: Accounts, action: UserAction, dirtyAccounts: A
   }
 }
 
-function deleteAccount(accounts: Accounts, action: DeleteAccount, dirtyAccounts: Array<AccountId>): Accounts {
+function deleteAccount(accounts: Accounts, action: DeleteAccount, dirtyAccounts: AccountId[]): Accounts {
   return accounts.withMutations(accounts => {
     const account = accounts.get(action.accountId, emptyAccount);
     for (const drainAccountId of account.drainEffectiveRates.keys()) {
@@ -217,12 +222,12 @@ function deleteAccount(accounts: Accounts, action: DeleteAccount, dirtyAccounts:
   });
 }
 
-function deleteDrain(accounts: Accounts, action: DeleteDrain, dirtyAccounts: Array<AccountId>): Accounts {
+function deleteDrain(accounts: Accounts, action: DeleteDrain, dirtyAccounts: AccountId[]): Accounts {
   dirtyAccounts.push(action.sourceAccountId);
   return accounts.setIn([action.sourceAccountId, 'drainSizes', action.targetAccountId], 0);
 }
 
-function injectMoney(accounts: Accounts, action: InjectMoney, dirtyAccounts: Array<AccountId>): Accounts {
+function injectMoney(accounts: Accounts, action: InjectMoney, dirtyAccounts: AccountId[]): Accounts {
   const { accountId } = action;
   let account = accounts.get(accountId, emptyAccount);
   if (account.accountId !== action.accountId) {
@@ -233,7 +238,7 @@ function injectMoney(accounts: Accounts, action: InjectMoney, dirtyAccounts: Arr
   return accounts.set(accountId, account);
 }
 
-function updateDrain(accounts: Accounts, action: UpdateDrain, dirtyAccounts: Array<AccountId>): Accounts {
+function updateDrain(accounts: Accounts, action: UpdateDrain, dirtyAccounts: AccountId[]): Accounts {
   let sourceAccount = accounts.get(action.sourceAccountId, emptyAccount);
   if (sourceAccount.accountId !== action.sourceAccountId) {
     sourceAccount = sourceAccount.set('accountId', action.sourceAccountId);
@@ -245,7 +250,11 @@ function updateDrain(accounts: Accounts, action: UpdateDrain, dirtyAccounts: Arr
   return accounts.set(action.sourceAccountId, sourceAccount);
 }
 
-function createOrUpdateAccount(accounts: Accounts, action: CreateOrUpdateAccount, dirtyAccounts: Array<AccountId>): Accounts {
+function createOrUpdateAccount(
+  accounts: Accounts,
+  action: CreateOrUpdateAccount,
+  dirtyAccounts: AccountId[]
+): Accounts {
   const { accountId } = action;
   let account = accounts.get(accountId, emptyAccount);
   if (account.accountId !== action.accountId) {
@@ -254,7 +263,8 @@ function createOrUpdateAccount(accounts: Accounts, action: CreateOrUpdateAccount
   if (action.capacity !== undefined) {
     account = account.set('capacity', action.capacity);
   }
-  // TODO: I think this can be done as part of changing the overflow rate, if we assume that absent overflows are equivalent to zero rate
+  // TODO: I think this can be done as part of changing the overflow rate, if we
+  // assume that absent overflows are equivalent to zero rate
   if (('overflowTargetId' in action) && action.overflowTargetId !== account.overflowTargetId) {
     const previousOverflowTargetId = account.overflowTargetId;
     // Disconnect the old overflow target
