@@ -76,6 +76,19 @@ export const noAccounts: Accounts = i.Map<AccountId, AccountState>();
 
 export const emptyAccount: AccountState = AccountState();
 
+export function calculateStateAtTime(actions: UserActionGroup[], targetTime: number): Accounts {
+  const history: FinancialHistory = computeFinancialHistory(actions);
+
+  for (let i = history.size - 1; i >= 0; i--) {
+    const state = history.get(i, never);
+    if (state.timestamp < targetTime) {
+      return projectLinear(state, targetTime).accounts;
+    }
+  }
+
+  return noAccounts;
+}
+
 export function computeFinancialHistory(actions: UserActionGroup[]): FinancialHistory {
   // TODO: Check for malformed account graphs, with cycles or self-references
   // TODO: Check for negative flow rates
